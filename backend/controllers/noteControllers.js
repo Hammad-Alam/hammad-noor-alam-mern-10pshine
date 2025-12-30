@@ -164,6 +164,56 @@ exports.updateNote = async (req, res) => {
   }
 };
 
+// Mark note as pinned
+exports.markNotePinned = async (req, res) => {
+  try {
+    const { noteId } = req.params;
+
+    // Update note
+    const note = await Note.findOneAndUpdate(
+      {
+        _id: noteId,
+        user: req.userId,    
+        isDeleted: false,       
+      },
+      { isPinned: true },
+      { new: true }             
+    );
+
+    // Check validation
+    if (!note) {
+      pino.info({ noteId }, "Note not found or already deleted");
+      return res.status(404).json({
+        status: "failed",
+        message: "Note not found",
+      });
+    }
+
+    // Return success log and response
+    pino.info({ noteId: note._id }, "Note marked as pinned successfully");
+
+    res.status(200).json({
+      status: "success",
+      message: "Note marked as pinned successfully",
+      data: {
+        id: note._id,
+        isPinned: note.isPinned,
+      },
+    });
+  } catch (error) {
+    // Return error log and response
+    pino.error(
+      { error, noteId: req.params.noteId },
+      "Error marking note as pinned"
+    );
+
+    res.status(500).json({
+      status: "error",
+      message: "Error marking note as pinned",
+    });
+  }
+};
+
 // Soft Delete a Note by ID
 exports.deleteNote = async (req, res) => {
   try {
