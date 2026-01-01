@@ -1,47 +1,59 @@
 // Import required modules
-const connectToMongo = require("./config/db");
-const express = require("express");
+import express from "express";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import pino from "pino";
+import dotenv from "dotenv";
+
+import connectToMongo from "./config/db.js";
+import authRoutes from "./routes/authRoutes.js";
+import noteRoutes from "./routes/noteRoutes.js";
+
+dotenv.config();
+
+const logger = pino();
 const app = express();
-const port = process.env.PORT;
-const cors = require("cors");
-const cookieParser = require("cookie-parser");
-const pino = require("pino")();
+const port = process.env.PORT || 5000;
 
-// Enable CORS, Cookie, and JSON parsing
-app.use(cors()); // Enable CORS for cross-origin requests
-app.use(express.json()); // Parse JSON request bodies
-app.use(cookieParser()); // Parse cookies
+// Enable middleware
+app.use(cors());
+app.use(express.json());
+app.use(cookieParser());
 
-// Import routes
-const authRoutes = require("./routes/authRoutes");
-const noteRoutes = require("./routes/noteRoutes");
-
-// Define API routes
-app.use("/api/auth", authRoutes); // Authentication routes
-app.use("/api/note", noteRoutes); // Note routes
+// Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/note", noteRoutes);
 
 // Welcome route
 app.get("/", (req, res) => {
-  pino.info("Welcome route accessed");
+  logger.info("Welcome route accessed");
   res.json({ message: "Welcome to WH Closet API" });
 });
 
-// Health check route
+// Health route
 app.get("/health", (req, res) => {
-  pino.info("Health check route accessed");
-  res.json({ status: "ok", message: "WH Closet API is running" });
+  res.json({ status: "ok" });
 });
 
-// Start server and listen on specified port
-app.listen(port, () => {
-  pino.info(`Notes App backend listening on port: http://localhost:${port}`);
-});
+// START SERVER ONLY IF NOT TEST
+if (process.env.NODE_ENV !== "test") {
+  connectToMongo()
+    .then(() => {
+      app.listen(port, () => {
+        logger.info(
+          `Notes App backend listening on port: http://localhost:${port}`
+        );
+      });
+    })
+    .catch((err) => {
+      logger.error("Error connecting to MongoDB", err);
+    });
+}
 
-// Establish connection to MongoDB
-connectToMongo();
-
-// Global error handling middleware
+// Global error handler
 app.use((err, req, res, next) => {
-  pino.error("Global error handler:", err);
+  logger.error(err);
   res.status(500).json({ message: "Internal Server Error" });
 });
+
+export default app;

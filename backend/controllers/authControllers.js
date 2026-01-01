@@ -1,13 +1,15 @@
-const jwt = require("jsonwebtoken");
-const User = require("../models/UserModel");
-const crypto = require("crypto");
-const bcrypt = require("bcrypt");
-const nodemailer = require("nodemailer");
-const { body, validationResult } = require("express-validator");
-const pino = require("pino")(); // Import Pino logger
+import jwt from "jsonwebtoken";
+import User from "../models/UserModel.js";
+import crypto from "crypto";
+import bcrypt from "bcrypt";
+import nodemailer from "nodemailer";
+import { body, validationResult } from "express-validator";
+
+import pino from "pino";
+const logger = pino();
 
 // Register a new user
-exports.register = async (req, res) => {
+const register = async (req, res) => {
   try {
     // Input validation
     await Promise.all([
@@ -37,7 +39,7 @@ exports.register = async (req, res) => {
     // Check if email already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      pino.info("Email already registered");
+      logger.info("Email already registered");
       return res.status(400).json({
         status: "failed",
         message: "Email already registered",
@@ -51,7 +53,7 @@ exports.register = async (req, res) => {
       password,
     });
 
-    pino.info("User registered successfully");
+    logger.info("User registered successfully");
     res.status(201).json({
       status: "success",
       message: "Registration successful",
@@ -61,13 +63,13 @@ exports.register = async (req, res) => {
       },
     });
   } catch (error) {
-    pino.error("Error during registration", error);
+    logger.error("Error during registration", error);
     res.status(500).json({ message: "Error during registration" });
   }
 };
 
 // Login a user
-exports.login = async (req, res) => {
+const login = async (req, res) => {
   try {
     // Input validation
     await Promise.all([
@@ -85,7 +87,7 @@ exports.login = async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      pino.info("Invalid credentials");
+      logger.info("Invalid credentials");
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
@@ -101,7 +103,7 @@ exports.login = async (req, res) => {
       sameSite: "strict",
     });
 
-    pino.info("User logged in successfully");
+    logger.info("User logged in successfully");
     res.json({
       message: "Login successful",
       token: jwtToken,
@@ -111,44 +113,44 @@ exports.login = async (req, res) => {
       },
     });
   } catch (error) {
-    pino.error("Error during login", error);
+    logger.error("Error during login", error);
     res.status(500).json({ message: "Error during login" });
   }
 };
 
 // Logout a user
-exports.logout = async (req, res) => {
+const logout = async (req, res) => {
   try {
     res.clearCookie("token");
-    pino.info("User logged out successfully");
+    logger.info("User logged out successfully");
     res.json({ message: "Logout successful" });
   } catch (error) {
-    pino.error("Error during logout", error);
+    logger.error("Error during logout", error);
     res.status(500).json({ message: "Error during logout" });
   }
 };
 
 // Get current user data
-exports.getUser = async (req, res) => {
+const getUser = async (req, res) => {
   try {
     const user = await User.findById(req.userId).select("-password");
     if (!user) {
-      pino.info("User not found");
+      logger.info("User not found");
       return res.status(404).json({ message: "User not found" });
     }
-    pino.info("User data retrieved successfully");
+    logger.info("User data retrieved successfully");
     res.json({
       status: "success",
       user,
     });
   } catch (error) {
-    pino.error("Error retrieving user data", error);
+    logger.error("Error retrieving user data", error);
     res.status(500).json({ message: "Error retrieving user data" });
   }
 };
 
 // Send password reset OTP
-exports.forgotPassword = async (req, res) => {
+const forgotPassword = async (req, res) => {
   try {
     // Input validation
     await body("email").isEmail().withMessage("Invalid email address").run(req);
@@ -162,7 +164,7 @@ exports.forgotPassword = async (req, res) => {
     const { email } = req.body;
     const user = await User.findOne({ email });
     if (!user) {
-      pino.info("Email not registered");
+      logger.info("Email not registered");
       return res.status(404).json({ message: "Email not registered" });
     }
 
@@ -194,7 +196,7 @@ exports.forgotPassword = async (req, res) => {
         If you did not request a password reset, please ignore this email.
     
         Best regards,
-        WH Closet
+        Notes App
       `,
     });
 
@@ -203,16 +205,16 @@ exports.forgotPassword = async (req, res) => {
     user.passwordResetExpires = Date.now() + 15 * 60 * 1000; // 15 minutes validity
     await user.save();
 
-    pino.info("OTP sent to email");
+    logger.info("OTP sent to email");
     res.status(200).json({ message: "OTP sent to email" });
   } catch (error) {
-    pino.error("Error sending OTP", error);
+    logger.error("Error sending OTP", error);
     res.status(500).json({ message: "Error sending OTP" });
   }
 };
 
 // Reset password
-exports.resetPassword = async (req, res) => {
+const resetPassword = async (req, res) => {
   try {
     // Input validation
     await Promise.all([
@@ -247,7 +249,7 @@ exports.resetPassword = async (req, res) => {
 
     // Check if passwords match
     if (newPassword !== confirmPassword) {
-      pino.info("New password and confirm password do not match");
+      logger.info("New password and confirm password do not match");
       return res.status(400).json({
         message: "New password and confirm password do not match",
       });
@@ -256,7 +258,7 @@ exports.resetPassword = async (req, res) => {
     // Find the user
     const user = await User.findOne({ email });
     if (!user) {
-      pino.info("User not found");
+      logger.info("User not found");
       return res.status(404).json({ message: "User not found" });
     }
 
@@ -265,7 +267,7 @@ exports.resetPassword = async (req, res) => {
       user.passwordResetOTP !== parseInt(otp) ||
       user.passwordResetExpires < Date.now()
     ) {
-      pino.info("Invalid or expired OTP");
+      logger.info("Invalid or expired OTP");
       return res.status(400).json({
         message: "Invalid or expired OTP",
       });
@@ -277,12 +279,14 @@ exports.resetPassword = async (req, res) => {
     user.passwordResetExpires = null;
     await user.save();
 
-    pino.info("Password reset successful");
+    logger.info("Password reset successful");
     res.status(200).json({
       message: "Password reset successful",
     });
   } catch (error) {
-    pino.error("Error resetting password", error);
+    logger.error("Error resetting password", error);
     res.status(500).json({ message: "Error resetting password" });
   }
 };
+
+export { register, login, logout, getUser, forgotPassword, resetPassword };
