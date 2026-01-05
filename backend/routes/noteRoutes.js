@@ -1,13 +1,13 @@
-const express = require("express");
-const ProtectedRoutes = require("../middleware/protectedRoutes.js");
-const {
+import express from 'express';
+import ProtectedRoutes from '../middleware/protectedRoutes.js';
+import {
   createNote,
   getNotes,
   getNoteById,
   updateNote,
-  deleteNote,
   markNotePinned,
-} = require("../controllers/noteControllers.js");
+  deleteNote,
+} from '../controllers/noteControllers.js';
 
 const router = express.Router();
 
@@ -19,4 +19,4 @@ router.patch("/:noteId", ProtectedRoutes, updateNote); // Update note by Id
 router.delete("/:noteId", ProtectedRoutes, deleteNote); // Delete note by Id
 router.patch("/:noteId/pin", ProtectedRoutes, markNotePinned); // Mark note as pinned
 
-module.exports = router;
+export default router;

@@ -1,9 +1,11 @@
-const Note = require("../models/NoteModel");
-const { body, validationResult } = require("express-validator");
-const pino = require("pino")();
+import Note from "../models/NoteModel.js";
+import { body, validationResult } from "express-validator";
+
+import pino from "pino";
+const logger = pino();
 
 // Creates a new note
-exports.createNote = async (req, res) => {
+const createNote = async (req, res) => {
   try {
     // Validate request body
     await Promise.all([
@@ -40,7 +42,7 @@ exports.createNote = async (req, res) => {
     });
 
     // Log success and return note
-    pino.info({ noteId: note._id }, "Note created successfully");
+    logger.info({ noteId: note._id }, "Note created successfully");
     res.status(201).json({
       status: "success",
       message: "Note created successfully",
@@ -48,13 +50,13 @@ exports.createNote = async (req, res) => {
     });
   } catch (error) {
     // Log error and return error response
-    pino.error("Error creating note", error);
+    logger.error("Error creating note", error);
     res.status(500).json({ message: "Error creating note" });
   }
 };
 
 // Retrieves notes for the authenticated user, with optional filtering.
-exports.getNotes = async (req, res) => {
+const getNotes = async (req, res) => {
   try {
     // Get query parameters
     const { category, isPinned } = req.query;
@@ -80,7 +82,7 @@ exports.getNotes = async (req, res) => {
     });
 
     // Log success and return notes
-    pino.info(
+    logger.info(
       {
         userId: req.userId,
         filters: { category, isPinned },
@@ -94,13 +96,13 @@ exports.getNotes = async (req, res) => {
     });
   } catch (error) {
     // Log error and return error response
-    pino.error("Error fetching notes", error);
+    logger.error("Error fetching notes", error);
     res.status(500).json({ message: "Error fetching notes" });
   }
 };
 
 // Retrieves specific note for the authenticated user
-exports.getNoteById = async (req, res) => {
+const getNoteById = async (req, res) => {
   try {
     // Fetch note using user Id
     const note = await Note.findOne({
@@ -111,7 +113,7 @@ exports.getNoteById = async (req, res) => {
 
     // Check validation
     if (!note) {
-      pino.info("Note not found");
+      logger.info("Note not found");
       return res.status(404).json({ message: "Note not found" });
     }
 
@@ -121,13 +123,13 @@ exports.getNoteById = async (req, res) => {
     });
   } catch (error) {
     // Log error and return error response
-    pino.error("Error fetching note", error);
+    logger.error("Error fetching note", error);
     res.status(500).json({ message: "Error fetching note" });
   }
 };
 
 // Update a Note by ID
-exports.updateNote = async (req, res) => {
+const updateNote = async (req, res) => {
   try {
     // Fetch note using user Id
     const note = await Note.findOne({
@@ -138,7 +140,7 @@ exports.updateNote = async (req, res) => {
 
     // Check validation
     if (!note) {
-      pino.info("Note not found for update");
+      logger.info("Note not found for update");
       return res.status(404).json({ message: "Note not found" });
     }
 
@@ -150,7 +152,7 @@ exports.updateNote = async (req, res) => {
     await note.save();
 
     // Log success and return response
-    pino.info({ noteId: note._id }, "Note updated successfully");
+    logger.info({ noteId: note._id }, "Note updated successfully");
 
     res.status(200).json({
       status: "success",
@@ -159,13 +161,13 @@ exports.updateNote = async (req, res) => {
     });
   } catch (error) {
     // Log error and return error response
-    pino.error("Error updating note", error);
+    logger.error("Error updating note", error);
     res.status(500).json({ message: "Error updating note" });
   }
 };
 
 // Mark note as pinned
-exports.markNotePinned = async (req, res) => {
+const markNotePinned = async (req, res) => {
   try {
     const { noteId } = req.params;
 
@@ -173,16 +175,16 @@ exports.markNotePinned = async (req, res) => {
     const note = await Note.findOneAndUpdate(
       {
         _id: noteId,
-        user: req.userId,    
-        isDeleted: false,       
+        user: req.userId,
+        isDeleted: false,
       },
       { isPinned: true },
-      { new: true }             
+      { new: true }
     );
 
     // Check validation
     if (!note) {
-      pino.info({ noteId }, "Note not found or already deleted");
+      logger.info({ noteId }, "Note not found or already deleted");
       return res.status(404).json({
         status: "failed",
         message: "Note not found",
@@ -190,7 +192,7 @@ exports.markNotePinned = async (req, res) => {
     }
 
     // Return success log and response
-    pino.info({ noteId: note._id }, "Note marked as pinned successfully");
+    logger.info({ noteId: note._id }, "Note marked as pinned successfully");
 
     res.status(200).json({
       status: "success",
@@ -202,7 +204,7 @@ exports.markNotePinned = async (req, res) => {
     });
   } catch (error) {
     // Return error log and response
-    pino.error(
+    logger.error(
       { error, noteId: req.params.noteId },
       "Error marking note as pinned"
     );
@@ -215,7 +217,7 @@ exports.markNotePinned = async (req, res) => {
 };
 
 // Soft Delete a Note by ID
-exports.deleteNote = async (req, res) => {
+const deleteNote = async (req, res) => {
   try {
     // Fetch note using user Id
     const note = await Note.findOne({
@@ -226,7 +228,7 @@ exports.deleteNote = async (req, res) => {
 
     // Check validation
     if (!note) {
-      pino.info("Note not found for deletion");
+      logger.info("Note not found for deletion");
       return res.status(404).json({ message: "Note not found" });
     }
 
@@ -235,7 +237,7 @@ exports.deleteNote = async (req, res) => {
     await note.save();
 
     // Log success and return response
-    pino.info({ noteId: note._id }, "Note deleted successfully");
+    logger.info({ noteId: note._id }, "Note deleted successfully");
 
     res.status(200).json({
       status: "success",
@@ -243,7 +245,16 @@ exports.deleteNote = async (req, res) => {
     });
   } catch (error) {
     // Log error and return error response
-    pino.error("Error deleting note", error);
+    logger.error("Error deleting note", error);
     res.status(500).json({ message: "Error deleting note" });
   }
+};
+
+export {
+  createNote,
+  getNotes,
+  getNoteById,
+  updateNote,
+  markNotePinned,
+  deleteNote,
 };

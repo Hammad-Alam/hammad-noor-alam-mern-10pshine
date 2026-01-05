@@ -1,13 +1,13 @@
-const express = require("express");
-const ProtectedRoutes = require("../middleware/protectedRoutes.js");
-const {
+import express from 'express';
+import ProtectedRoutes from '../middleware/protectedRoutes.js';
+import {
   register,
   login,
   logout,
   forgotPassword,
   resetPassword,
   getUser,
-} = require("../controllers/authControllers.js");
+} from '../controllers/authControllers.js';
 
 const router = express.Router();
 
@@ -18,7 +18,7 @@ router.post("/forgot-password", forgotPassword); // Send password reset OTP
 router.post("/reset-password", resetPassword); // Reset password
 
 // Protected routes
-router.get("/logout", ProtectedRoutes, logout); // Logout a user
+router.post("/logout", ProtectedRoutes, logout); // Logout a user
 router.get("/me", ProtectedRoutes, getUser); // Get current user data
 
-module.exports = router;
+export default router;
