@@ -100,7 +100,7 @@ const login = async (req, res) => {
     res.cookie("token", jwtToken, {
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000,
-      sameSite: "strict",
+      sameSite: "lax",
     });
 
     logger.info("User logged in successfully");
@@ -121,7 +121,10 @@ const login = async (req, res) => {
 // Logout a user
 const logout = async (req, res) => {
   try {
-    res.clearCookie("token");
+    res.clearCookie("token", {
+      httpOnly: true,
+      sameSite: "lax",
+    });
     logger.info("User logged out successfully");
     res.json({ message: "Logout successful" });
   } catch (error) {
@@ -264,7 +267,7 @@ const resetPassword = async (req, res) => {
 
     // Check if OTP is valid
     if (
-      user.passwordResetOTP !== parseInt(otp) ||
+      user.passwordResetOTP !== otp ||
       user.passwordResetExpires < Date.now()
     ) {
       logger.info("Invalid or expired OTP");
