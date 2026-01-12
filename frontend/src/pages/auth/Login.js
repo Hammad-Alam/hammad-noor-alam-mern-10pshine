@@ -50,7 +50,7 @@ function Login(props) {
         email: "",
         password: "",
       });
-      navigate("/dashboard");
+      navigate("/notes");
       props.handleAlert("Successfully logged in.", "success");
     } catch (error) {
       console.error('Login error:', error);

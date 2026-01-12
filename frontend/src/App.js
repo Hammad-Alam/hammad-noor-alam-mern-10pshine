@@ -6,7 +6,9 @@ import Alert from "./components/common/Alert";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import VerifyOTP from "./pages/auth/VerifyOTP";
 import ResetPassword from "./pages/auth/ResetPassword";
-import Dashboard from "./pages/Dashboard";
+
+import NotesDashboard from "./pages/notes/NotesDashboard";
+import NoteEditor from "./pages/notes/NoteEditor";
 
 function App() {
   const [alert, setAlert] = useState(null);
@@ -25,7 +27,9 @@ function App() {
         <Route path="/" element={<Login handleAlert={handleAlert} />} />
         <Route path="/login" element={<Login handleAlert={handleAlert} />} />
         <Route path="/signup" element={<Signup handleAlert={handleAlert} />} />
-        <Route path="/dashboard" element={<Dashboard handleAlert={handleAlert} />} />
+        <Route path="/notes" element={<NotesDashboard handleAlert={handleAlert} />} />
+        <Route path="/notes/create" element={<NoteEditor handleAlert={handleAlert} />} />
+        <Route path="/notes/edit/:noteId" element={<NoteEditor handleAlert={handleAlert} />} />
         <Route
           path="/forgot-password"
           element={<ForgotPassword handleAlert={handleAlert} />}
