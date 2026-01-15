@@ -135,14 +135,14 @@ describe("Note APIs", function () {
 
   // Mark note as pinned API - Test cases
   describe("PATCH /api/note/:noteId/pin", () => {
-    it("should mark the note as pinned successfully", async () => {
+    it("should toggle the note's pinned state successfully", async () => {
       const res = await chai.request
         .execute(app)
-        .patch(`/api/note/${noteId}/pin`)
+        .patch(`/api/note/${noteId}/toggle-note`)
         .set("Cookie", [`token=${token}`]);
-
+    
       expect(res).to.have.status(200);
-      expect(res.body.message).to.equal("Note marked as pinned successfully");
+      expect(res.body.message).to.match(/Note (pinned|unpinned) successfully/);
     });
 
     it("should fail when the token is missing", async () => {

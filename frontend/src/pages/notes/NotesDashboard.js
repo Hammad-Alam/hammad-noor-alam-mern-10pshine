@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from "react";
+import DOMPurify from "dompurify";
 import { Plus, Edit, Trash2, Pin, ChevronDown, Check } from "lucide-react";
 import { Listbox } from "@headlessui/react";
 import { useNavigate } from "react-router-dom";
 import Header from "../../components/layout/Header";
+import api from "../../services/api";
 
 function NotesDashboard(props) {
   const navigate = useNavigate();
+  const [notes, setNotes] = useState([]);
+  const [refresh, setRefresh] = useState(false);
 
   // State for filters
   const [filters, setFilters] = useState({
@@ -14,56 +18,25 @@ function NotesDashboard(props) {
     isPinned: "",
   });
 
-  // Mock data for notes - will be replaced with API call later
-  const [notes, setNotes] = useState([
-    {
-      _id: "1",
-      title: "Meeting Notes",
-      description:
-        "Discussed project timeline and deliverables for Q1 2024. Key stakeholders agreed on the proposed approach.",
-      category: "work",
-      tags: ["meeting", "timeline", "q1"],
-      isPinned: true,
-      createdAt: "2024-01-15T10:30:00Z",
-      updatedAt: "2024-01-15T10:30:00Z",
-    },
-    {
-      _id: "2",
-      title: "Shopping List",
-      description:
-        "Milk, eggs, bread, fruits, vegetables, chicken, rice, pasta sauce",
-      category: "personal",
-      tags: ["shopping", "groceries"],
-      isPinned: false,
-      createdAt: "2024-01-14T08:15:00Z",
-      updatedAt: "2024-01-14T08:15:00Z",
-    },
-    {
-      _id: "3",
-      title: "Project Ideas",
-      description:
-        "Brainstormed new project ideas for the upcoming hackathon. Focus on sustainability and social impact themes.",
-      category: "ideas",
-      tags: ["brainstorm", "hackathon", "sustainability"],
-      isPinned: false,
-      createdAt: "2024-01-13T14:20:00Z",
-      updatedAt: "2024-01-13T14:20:00Z",
-    },
-    {
-      _id: "4",
-      title: "Book Recommendations",
-      description:
-        "The Alchemist, Atomic Habits, Deep Work, Sapiens - all great reads for personal development.",
-      category: "reading",
-      tags: ["books", "recommendations", "personal development"],
-      isPinned: true,
-      createdAt: "2024-01-12T16:45:00Z",
-      updatedAt: "2024-01-12T16:45:00Z",
-    },
-  ]);
+  useEffect(() => {
+    const fetchNotes = async () => {
+      try {
+        const response = await api.get(`/api/note/`);
+        setNotes(response.data.data);
+      } catch (error) {
+        console.error("Fetch notes error:", error);
+        const errorMessage =
+          error.response?.data?.message ||
+          "Failed to fetch notes. Please try again.";
+        props.handleAlert(errorMessage, "danger");
+      }
+    };
+
+    fetchNotes();
+  }, [refresh]);
 
   // Filtered notes based on current filters
-  const filteredNotes = notes.filter((note) => {
+  const filteredNotes = notes?.filter((note) => {
     // Search filter - check title and tags
     const matchesSearch =
       !filters.search ||
@@ -92,6 +65,38 @@ function NotesDashboard(props) {
 
   // Get unique categories for filter options
   const categories = [...new Set(notes.map((note) => note.category))];
+
+  const deleteNote = async (noteId) => {
+    try {
+      const response = await api.delete(`/api/note/${noteId}`);
+      if (response.data.status === "success") {
+        setRefresh(!refresh); // toggle refresh
+        props.handleAlert("Note deleted successfully.", "success");
+      }
+    } catch (error) {
+      console.error("Deleting note error:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        "Error deleting note. Please try again.";
+      props.handleAlert(errorMessage, "danger");
+    }
+  };
+
+  const toggleNote = async (noteId) => {
+    try {
+      const response = await api.patch(`/api/note/${noteId}/toggle-note`);
+      if (response.data.status === "success") {
+        setRefresh(!refresh); // toggle refresh
+        props.handleAlert("Note pinned state toggle successfully.", "success");
+      }
+    } catch (error) {
+      console.error("Pinned state toggle error:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        "Error pinning state toggle note. Please try again.";
+      props.handleAlert(errorMessage, "danger");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -290,25 +295,34 @@ function NotesDashboard(props) {
                         {note.title}
                       </h3>
                       <div className="flex space-x-1">
-                        {note.isPinned && (
-                          <Pin
-                            className="text-yellow-500 flex-shrink-0"
-                            size={18}
-                          />
-                        )}
-                        <button className="text-gray-400 hover:text-indigo-600 transition-colors duration-150">
-                          <Edit size={18} />
+                        <button
+                          className="text-gray-400 hover:text-indigo-600 transition-colors duration-150"
+                          onClick={() => toggleNote(note._id)}
+                        >
+                          <Pin size={18} />
                         </button>
-                        <button className="text-gray-400 hover:text-red-600 transition-colors duration-150">
+                        <button className="text-gray-400 hover:text-indigo-600 transition-colors duration-150">
+                          <Edit
+                            size={18}
+                            onClick={() =>
+                              navigate(`/notes/edit/${note._id}`)
+                            }
+                          />
+                        </button>
+                        <button
+                          className="text-gray-400 hover:text-red-600 transition-colors duration-150"
+                          onClick={() => deleteNote(note._id)}
+                        >
                           <Trash2 size={18} />
                         </button>
                       </div>
                     </div>
 
                     <div className="mb-3">
-                      <p className="text-gray-600 text-sm line-clamp-3">
-                        {note.description}
-                      </p>
+                      <div
+                        className="text-gray-600 text-sm line-clamp-3"
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.description) }}
+                      />
                     </div>
 
                     <div className="flex flex-wrap gap-2 mb-4">
