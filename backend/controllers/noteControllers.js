@@ -166,20 +166,18 @@ const updateNote = async (req, res) => {
   }
 };
 
-// Mark note as pinned
-const markNotePinned = async (req, res) => {
+// Mark note as pinned / unpinned
+const toggleNotePinned = async (req, res) => {
   try {
     const { noteId } = req.params;
 
-    // Update note
+    // Find note
     const note = await Note.findOneAndUpdate(
       {
         _id: noteId,
         user: req.userId,
         isDeleted: false,
       },
-      { isPinned: true },
-      { new: true }
     );
 
     // Check validation
@@ -191,12 +189,16 @@ const markNotePinned = async (req, res) => {
       });
     }
 
+    // Toggle note pinned state
+    note.isPinned = !note.isPinned;
+    await note.save();
+
     // Return success log and response
-    logger.info({ noteId: note._id }, "Note marked as pinned successfully");
+    logger.info({ noteId: note._id }, "Note pinned state toggled successfully");
 
     res.status(200).json({
       status: "success",
-      message: "Note marked as pinned successfully",
+      message: `Note ${note.isPinned ? "pinned" : "unpinned"} successfully.`,
       data: {
         id: note._id,
         isPinned: note.isPinned,
@@ -206,12 +208,12 @@ const markNotePinned = async (req, res) => {
     // Return error log and response
     logger.error(
       { error, noteId: req.params.noteId },
-      "Error marking note as pinned"
+      "Error toggling note pinned state"
     );
 
     res.status(500).json({
       status: "error",
-      message: "Error marking note as pinned",
+      message: "Error toggling note pinned state",
     });
   }
 };
@@ -255,6 +257,6 @@ export {
   getNotes,
   getNoteById,
   updateNote,
-  markNotePinned,
+  toggleNotePinned,
   deleteNote,
 };
