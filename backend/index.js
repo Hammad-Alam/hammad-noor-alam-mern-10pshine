@@ -27,7 +27,7 @@ app.use("/api/note", noteRoutes);
 // Welcome route
 app.get("/", (req, res) => {
   logger.info("Welcome route accessed");
-  res.json({ message: "Welcome to WH Closet API" });
+  res.json({ message: "Welcome to Luminote API" });
 });
 
 // Health route
@@ -41,7 +41,7 @@ if (process.env.NODE_ENV !== "test") {
     .then(() => {
       app.listen(port, () => {
         logger.info(
-          `Notes App backend listening on port: http://localhost:${port}`
+          `Luminote backend listening on port: http://localhost:${port}`
         );
       });
     })
