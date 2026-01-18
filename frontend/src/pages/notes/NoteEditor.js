@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  ArrowLeft,
   Save,
   X,
   Pin,
@@ -11,13 +10,14 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
-  List,
-  ListOrdered,
   Link,
   Minus,
-  LogOut,
 } from "lucide-react";
+import { Listbox, Transition } from "@headlessui/react";
+import Loading from "../../components/Loading";
+import { Check, ChevronDown } from "lucide-react";
 import api from "../../services/api";
+import Header from "../../components/layout/Header";
 
 function NoteEditor(props) {
   const navigate = useNavigate();
@@ -37,35 +37,44 @@ function NoteEditor(props) {
   // State for rich text editor
   const [editorContent, setEditorContent] = useState("");
   const [newTag, setNewTag] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(false);
 
-  // Mock existing note data
   useEffect(() => {
-    const fetchNote = async () => {
-      try {
-        const response = await api.get(`/api/note/${noteId}`);
-        const note = response.data.data;
-
-        setNoteData({
-          title: note.title,
-          category: note.category || "general",
-          tags: note.tags || [],
-          isPinned: note.isPinned || false,
-        });
-
-        setEditorContent(note.description || "");
-      } catch (error) {
-        console.error("Fetch note error:", error);
-        const errorMessage =
-          error?.response?.data?.message || "Failed to load note";
-        props.handleAlert(errorMessage, "danger");
-        navigate("/notes");
-      }
-    };
-
     if (noteId) {
+      const fetchNote = async () => {
+        setInitialLoad(true);
+        setLoading(true);
+        try {
+          const response = await api.get(`/api/note/${noteId}`);
+          const note = response.data.data;
+
+          setNoteData({
+            title: note.title,
+            category: note.category || "general",
+            tags: note.tags || [],
+            isPinned: note.isPinned || false,
+          });
+
+          setEditorContent(note.description || "");
+        } catch (error) {
+          console.error("Fetch note error:", error);
+          const errorMessage =
+            error?.response?.data?.message || "Failed to load note";
+          props.handleAlert(errorMessage, "danger");
+          navigate("/notes");
+        } finally {
+          setLoading(false);
+          setInitialLoad(false);
+        }
+      };
+
       fetchNote();
+    } else {
+      // For new notes, set initial load to false
+      setInitialLoad(false);
     }
-  }, [noteId]);
+  }, [noteId, navigate]);
 
   const handleInputChange = (field, value) => {
     setNoteData((prev) => ({
@@ -92,6 +101,8 @@ function NoteEditor(props) {
   };
 
   const handleSaveNote = async () => {
+    if (loading) return; // Prevent multiple submissions
+    setLoading(true);
     if (!noteData.title.trim()) {
       props.handleAlert("Title is required", "danger");
     }
@@ -121,6 +132,8 @@ function NoteEditor(props) {
       const errorMessage =
         error?.response?.data?.message || "Failed to save note";
       props.handleAlert(errorMessage, "danger");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -143,12 +156,6 @@ function NoteEditor(props) {
       case "justifyRight":
         document.execCommand(command, false, null);
         break;
-      case "unorderedList":
-        document.execCommand("insertUnorderedList", false, null);
-        break;
-      case "orderedList":
-        document.execCommand("insertOrderedList", false, null);
-        break;
       case "horizontalRule":
         document.execCommand("insertHorizontalRule", false, null);
         break;
@@ -161,49 +168,16 @@ function NoteEditor(props) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-semibold text-gray-900">
-                {noteId ? "Edit Note" : "Create New Note"}
-              </h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => navigate("/notes")}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                <ArrowLeft className="mr-2" size={18} />
-                Back to Notes
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    await api.post(`/api/auth/logout`, {});
-                    navigate("/login");
-                    props.handleAlert("Logged out successfully.", "success");
-                  } catch (error) {
-                    console.error("Logout error:", error);
-                    props.handleAlert(
-                      "Error logging out. Please try again.",
-                      "danger"
-                    );
-                  }
-                }}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                <LogOut className="mr-2" size={18} />
-                Logout
-              </button>
-            </div>
-          </div>
+      {initialLoad ? (
+        <div className="flex items-center justify-center min-h-screen bg-gray-50">
+          <Loading message="Loading note..." />
         </div>
-      </nav>
-
-      <main className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg p-6">
+      ) : (
+        <>
+          <Header handleAlert={props.handleAlert} showBackButton={true} />
+          <main className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
+            <div className="px-4 py-6 sm:px-0">
+              <div className="bg-white shadow overflow-hidden sm:rounded-lg p-6">
             <div className="mb-6">
               <label
                 htmlFor="title"
@@ -248,23 +222,7 @@ function NoteEditor(props) {
                 <Underline size={18} />
               </button>
               <div className="border-t border-gray-200 w-px h-8 mx-1"></div>
-              <button
-                type="button"
-                onClick={() => handleFormatText("unorderedList")}
-                className="p-2 text-sm border border-gray-300 rounded-md hover:bg-gray-100 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                title="Bullet List"
-              >
-                <List size={18} />
-              </button>
-              <button
-                type="button"
-                onClick={() => handleFormatText("orderedList")}
-                className="p-2 text-sm border border-gray-300 rounded-md hover:bg-gray-100 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                title="Numbered List"
-              >
-                <ListOrdered size={18} />
-              </button>
-              <div className="border-t border-gray-200 w-px h-8 mx-1"></div>
+
               <button
                 type="button"
                 onClick={() => document.execCommand("justifyLeft", false, null)}
@@ -342,30 +300,56 @@ function NoteEditor(props) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div>
+              <div className="relative">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Category
                 </label>
-                <select
+                <Listbox
                   value={noteData.category}
-                  onChange={(e) =>
-                    handleInputChange("category", e.target.value)
-                  }
-                  className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white transition duration-150 ease-in-out appearance-none pr-10"
-                  style={{
-                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
-                    backgroundPosition: "right 1rem center",
-                    backgroundRepeat: "no-repeat",
-                    backgroundSize: "1.5em 1.5em",
-                  }}
+                  onChange={(value) => handleInputChange("category", value)}
                 >
-                  <option value="general">General</option>
-                  <option value="work">Work</option>
-                  <option value="personal">Personal</option>
-                  <option value="ideas">Ideas</option>
-                  <option value="reading">Reading</option>
-                  <option value="shopping">Shopping</option>
-                </select>
+                  <Listbox.Button className="relative w-full cursor-pointer rounded-lg bg-white py-3 pl-4 pr-10 text-left border border-gray-300 shadow-sm hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                    <span className="block truncate capitalize">
+                      {noteData.category}
+                    </span>
+                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                      <ChevronDown className="h-5 w-5 text-gray-400" />
+                    </span>
+                  </Listbox.Button>
+                  <Transition
+                    enter="transition duration-100 ease-out"
+                    enterFrom="transform scale-95 opacity-0"
+                    enterTo="transform scale-100 opacity-100"
+                    leave="transition duration-75 ease-out"
+                    leaveFrom="transform scale-100 opacity-100"
+                    leaveTo="transform scale-95 opacity-0"
+                  >
+                    <Listbox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-xl bg-white py-2 shadow-lg ring-1 ring-black/10 focus:outline-none left-0">
+                      {["general", "work", "personal", "ideas", "reading", "shopping"].map(
+                        (category) => (
+                          <Listbox.Option
+                            key={category}
+                            value={category}
+                            className={({ active }) =>
+                              `cursor-pointer select-none text-sm px-4 py-2 rounded-md ${
+                                active
+                                  ? "bg-indigo-500 text-white"
+                                  : "text-gray-700"
+                              }`
+                            }
+                          >
+                            <div className="flex justify-between items-center">
+                              <span className="capitalize">{category}</span>
+                              {noteData.category === category && (
+                                <Check className="h-4 w-4" />
+                              )}
+                            </div>
+                          </Listbox.Option>
+                        )
+                      )}
+                    </Listbox.Options>
+                  </Transition>
+                </Listbox>
               </div>
 
               <div>
@@ -448,16 +432,31 @@ function NoteEditor(props) {
               <button
                 type="button"
                 onClick={handleSaveNote}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                disabled={loading}
               >
-                <Save className="mr-2" size={18} />
-                {noteId ? "Update Note" : "Create Note"}
+                {loading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    {noteId ? "Updating..." : "Creating..."}
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2" size={18} />
+                    {noteId ? "Update Note" : "Create Note"}
+                  </>
+                )}
               </button>
             </div>
           </div>
         </div>
       </main>
-    </div>
+      </>
+    )}
+  </div>
   );
 }
 
