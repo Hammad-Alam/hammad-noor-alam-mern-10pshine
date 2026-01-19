@@ -1,5 +1,5 @@
 {
-  "name": "notes-app-backend",
+  "name": "luminote-backend",
   "version": "1.0.0",
   "description": "A full-stack web application for note management with user authentication, logging, and database integration.",
   "main": "index.js",
@@ -10,7 +10,7 @@
     "test": "cross-env NODE_ENV=test mocha --timeout 20000 --exit"
   },
   "keywords": [
-    "notes-app",
+    "luminote",
     "full-stack",
     "notes-management"
   ],

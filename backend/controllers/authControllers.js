@@ -20,10 +20,10 @@ const register = async (req, res) => {
       body("email").isEmail().withMessage("Invalid email address").run(req),
       body("password")
         .matches(
-          /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
+          /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
         )
         .withMessage(
-          "Password should be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, one number and one special character"
+          "Password should be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, one number and one special character",
         )
         .run(req),
     ]);
@@ -183,24 +183,48 @@ const forgotPassword = async (req, res) => {
       },
     });
 
+    const emailBody = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                .container { max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; }
+                .header { background-color: #DC2626; color: white; padding: 20px; text-align: center; }
+                .content { padding: 30px; background-color: #f9f9f9; }
+                .code { background-color: #DC2626; color: white; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; margin: 20px 0; border-radius: 8px; }
+                .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
+                .warning { background-color: #FEF3C7; border-left: 4px solid #F59E0B; padding: 15px; margin: 20px 0; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>Luminote</h1>
+                    <p>Password Reset Request</p>
+                </div>
+                <div class="content">
+                    <h2>Hello${user.name ? ", " + user.name : ""}!</h2>
+                    <p>We received a request to reset your password. Use the verification code below to reset your password:</p>
+                    
+                    <div class="code">${otp}</div>
+                    
+                    <div class="warning">
+                        <strong>Security Notice:</strong> This code will expire in 15 minutes. If you didn't request this password reset, please ignore this email and your password will remain unchanged.
+                    </div>
+                </div>
+                <div class="footer">
+                    <p>&copy; 2026 Luminote. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+`;
+
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: email,
       subject: "Password Reset OTP",
-      text: `
-        Dear ${user.name},
-    
-        You have requested a password reset for your account. To complete the process, please use the following One-Time Password (OTP):
-    
-        OTP: ${otp}
-    
-        This OTP is valid for 15 minutes. Please enter it on the password reset page to create a new password.
-    
-        If you did not request a password reset, please ignore this email.
-    
-        Best regards,
-        Notes App
-      `,
+      html: emailBody,
     });
 
     // Update user's OTP and expiration time
@@ -230,10 +254,10 @@ const resetPassword = async (req, res) => {
         .run(req),
       body("newPassword")
         .matches(
-          /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
+          /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
         )
         .withMessage(
-          "Password should be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, one number and one special character"
+          "Password should be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, one number and one special character",
         )
         .run(req),
       body("confirmPassword")
