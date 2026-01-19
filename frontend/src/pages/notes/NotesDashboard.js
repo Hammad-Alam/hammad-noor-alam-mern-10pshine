@@ -4,12 +4,16 @@ import { Plus, Edit, Trash2, Pin, ChevronDown, Check } from "lucide-react";
 import { Listbox } from "@headlessui/react";
 import { useNavigate } from "react-router-dom";
 import Header from "../../components/layout/Header";
+import Pagination from "../../components/Pagination";
 import api from "../../services/api";
+import Loading from "../../components/Loading";
 
 function NotesDashboard(props) {
   const navigate = useNavigate();
   const [notes, setNotes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [refresh, setRefresh] = useState(false);
+  const [expandedNotes, setExpandedNotes] = useState(new Set());
 
   // State for filters
   const [filters, setFilters] = useState({
@@ -18,8 +22,13 @@ function NotesDashboard(props) {
     isPinned: "",
   });
 
+  // State for pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const notesPerPage = 6;
+
   useEffect(() => {
     const fetchNotes = async () => {
+      setLoading(true);
       try {
         const response = await api.get(`/api/note/`);
         setNotes(response.data.data);
@@ -29,6 +38,8 @@ function NotesDashboard(props) {
           error.response?.data?.message ||
           "Failed to fetch notes. Please try again.";
         props.handleAlert(errorMessage, "danger");
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -56,15 +67,42 @@ function NotesDashboard(props) {
     return matchesSearch && matchesCategory && matchesPinned;
   });
 
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredNotes?.length / notesPerPage);
+  const startIndex = (currentPage - 1) * notesPerPage;
+  const endIndex = startIndex + notesPerPage;
+  const paginatedNotes = filteredNotes?.slice(startIndex, endIndex) || [];
+
   const handleFilterChange = (filterName, value) => {
     setFilters((prev) => ({
       ...prev,
       [filterName]: value,
     }));
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
   };
 
   // Get unique categories for filter options
   const categories = [...new Set(notes.map((note) => note.category))];
+
+  const toggleExpanded = (noteId) => {
+    const newExpanded = new Set(expandedNotes);
+    if (newExpanded.has(noteId)) {
+      newExpanded.delete(noteId);
+    } else {
+      newExpanded.add(noteId);
+    }
+    setExpandedNotes(newExpanded);
+  };
+
+  const truncateText = (text, maxLength = 40) => {
+    if (!text) return "";
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + "...";
+  };
 
   const deleteNote = async (noteId) => {
     try {
@@ -278,104 +316,127 @@ function NotesDashboard(props) {
           </div>
 
           {/* Notes Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredNotes.length > 0 ? (
-              filteredNotes.map((note) => (
-                <div
-                  key={note._id}
-                  className={`bg-white rounded-xl shadow-md border-l-4 ${
-                    note.isPinned
-                      ? "border-yellow-400 bg-yellow-50"
-                      : "border-indigo-500"
-                  } overflow-hidden transition-all duration-200 hover:shadow-lg`}
-                >
-                  <div className="p-5">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900 truncate">
-                        {note.title}
-                      </h3>
-                      <div className="flex space-x-1">
-                        <button
-                          className="text-gray-400 hover:text-indigo-600 transition-colors duration-150"
-                          onClick={() => toggleNote(note._id)}
-                        >
-                          <Pin size={18} />
-                        </button>
-                        <button className="text-gray-400 hover:text-indigo-600 transition-colors duration-150">
-                          <Edit
-                            size={18}
-                            onClick={() =>
-                              navigate(`/notes/edit/${note._id}`)
-                            }
-                          />
-                        </button>
-                        <button
-                          className="text-gray-400 hover:text-red-600 transition-colors duration-150"
-                          onClick={() => deleteNote(note._id)}
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="mb-3">
-                      <div
-                        className="text-gray-600 text-sm line-clamp-3"
-                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.description) }}
-                      />
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                        {note.category.charAt(0).toUpperCase() +
-                          note.category.slice(1)}
-                      </span>
-                      {note.tags.map((tag, index) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                        >
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-
-                    <div className="flex justify-between items-center text-xs text-gray-500">
-                      <span>
-                        Updated {new Date(note.updatedAt).toLocaleDateString()}
-                      </span>
-                      <span>
-                        {new Date(note.updatedAt).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="col-span-full py-12 text-center">
-                <svg
-                  className="mx-auto h-12 w-12 text-gray-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                <h3 className="mt-2 text-sm font-medium text-gray-900">
-                  No notes found
-                </h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Get started by creating a new note.
-                </p>
+          <div className="bg-white rounded-xl shadow overflow-hidden">
+            {loading ? (
+              <div className="py-12">
+                <Loading message="Loading notes..." />
               </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+                  {paginatedNotes.length > 0 ? (
+                    paginatedNotes.map((note) => (
+                      <div
+                        key={note._id}
+                        className={`bg-white rounded-xl shadow-md border-l-4 ${
+                          note.isPinned
+                            ? "border-yellow-400 bg-yellow-50"
+                            : "border-indigo-500"
+                        } overflow-hidden transition-all duration-200 hover:shadow-lg h-full flex flex-col`}
+                      >
+                        <div className="p-5 flex-grow">
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className="text-lg font-semibold text-gray-900 truncate">
+                              {note.title}
+                            </h3>
+                            <div className="flex space-x-1">
+                              <button
+                                className="text-gray-400 hover:text-indigo-600 transition-colors duration-150"
+                                onClick={() => toggleNote(note._id)}
+                              >
+                                <Pin size={18} />
+                              </button>
+                              <button className="text-gray-400 hover:text-indigo-600 transition-colors duration-150">
+                                <Edit
+                                  size={18}
+                                  onClick={() =>
+                                    navigate(`/notes/edit/${note._id}`)
+                                  }
+                                />
+                              </button>
+                              <button
+                                className="text-gray-400 hover:text-red-600 transition-colors duration-150"
+                                onClick={() => deleteNote(note._id)}
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="mb-3">
+                            <div
+                              className="text-gray-600 text-sm line-clamp-3 cursor-pointer"
+                              onClick={() => toggleExpanded(note._id)}
+                              dangerouslySetInnerHTML={{ 
+                                __html: DOMPurify.sanitize(
+                                  expandedNotes.has(note._id) 
+                                    ? note.description 
+                                    : truncateText(note.description, 120)
+                                ) 
+                              }}
+                            />
+                          </div>
+
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                              {note.category.charAt(0).toUpperCase() +
+                                note.category.slice(1)}
+                            </span>
+                            {note.tags.map((tag, index) => (
+                              <span
+                                key={index}
+                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                              >
+                                #{tag}
+                              </span>
+                            ))}
+                          </div>
+
+                          <div className="flex justify-between items-center text-xs text-gray-500 mt-auto pt-3">
+                            <span>
+                              Updated {new Date(note.updatedAt).toLocaleDateString()}
+                            </span>
+                            <span>
+                              {new Date(note.updatedAt).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="col-span-full py-12 text-center">
+                      <svg
+                        className="mx-auto h-12 w-12 text-gray-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                      <h3 className="mt-2 text-sm font-medium text-gray-900">
+                        No notes found
+                      </h3>
+                      <p className="mt-1 text-sm text-gray-500">
+                        Get started by creating a new note.
+                      </p>
+                    </div>
+                  )}
+                </div>
+                
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                />
+              </>
             )}
           </div>
         </div>
