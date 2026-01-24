@@ -2,14 +2,15 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { LogOut, ArrowLeft } from "lucide-react";
 import logo from "../../assets/logo.png";
-import api from "../../services/api";
+import { useAuth } from "../../contexts/AuthContext";
 
 function Header({ handleAlert, showBackButton = false }) {
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const handleLogout = async () => {
     try {
-      await api.post(`/api/auth/logout`, {});
+      await logout();
       navigate("/login");
       handleAlert("Logged out successfully.", "success");
     } catch (error) {

@@ -1,18 +1,25 @@
 import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import AuthCard from "../../components/common/AuthCard";
 import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
 import { Eye, EyeOff } from "lucide-react";
-import api from "../../services/api";
+import { useAuth } from "../../contexts/AuthContext";
 
 function Login(props) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
+  
   const [credentials, setCredentials] = useState({
     email: "",
     password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  // Get the redirect path from location state, default to '/notes'
+  const from = location.state?.from?.pathname || "/notes";
 
   const handleChange = (e) => {
     setCredentials({ ...credentials, [e.target.name]: e.target.value });
@@ -20,16 +27,19 @@ function Login(props) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
     try {
       if (!credentials.email || !credentials.password) {
         props.handleAlert("Please fill in all fields.", "danger");
+        setLoading(false);
         return;
       }
 
       // Validate password is not empty
       if (!credentials.password.trim()) {
         props.handleAlert("Password is required.", "danger");
+        setLoading(false);
         return;
       }
 
@@ -37,26 +47,30 @@ function Login(props) {
       const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailPattern.test(credentials.email)) {
         props.handleAlert("Please enter valid email format.", "danger");
+        setLoading(false);
         return;
       }
 
-      const response = await api.post(
-        `/api/auth/login`,
-        credentials
-      );
+      const result = await login(credentials);
 
-      // The backend sets the token in cookies automatically
-      setCredentials({
-        email: "",
-        password: "",
-      });
-      navigate("/notes");
-      props.handleAlert("Successfully logged in.", "success");
+      if (result.success) {
+        setCredentials({
+          email: "",
+          password: "",
+        });
+        // Redirect to the originally requested page or default to notes
+        navigate(from, { replace: true });
+        props.handleAlert("Successfully logged in.", "success");
+      } else {
+        props.handleAlert(result.error, "danger");
+      }
     } catch (error) {
       console.error('Login error:', error);
       const errorMessage =
         error.response?.data?.message || "Login failed. Please try again.";
       props.handleAlert(errorMessage, "danger");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -86,13 +100,13 @@ function Login(props) {
             onChange={handleChange}
             iconRight={
               showPassword ? (
-                <EyeOff
+                <Eye
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-gray-500"
                   size={20}
                   onClick={() => setShowPassword(!showPassword)}
                 />
               ) : (
-                <Eye
+                <EyeOff
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-gray-500"
                   size={20}
                   onClick={() => setShowPassword(!showPassword)}
@@ -114,10 +128,11 @@ function Login(props) {
         </div>
 
         <Button
-          text="Sign in"
+          text={loading ? "Signing in..." : "Sign in"}
+          disabled={loading}
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              handleSubmit();
+            if (e.key === "Enter" && !loading) {
+              handleSubmit(e);
             }
           }}
         />

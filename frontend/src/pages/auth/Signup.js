@@ -19,6 +19,7 @@ function Signup(props) {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Update credentials state on input change
   const handleChange = (e) => {
@@ -66,6 +67,7 @@ function Signup(props) {
       return;
     }
 
+    setLoading(true);
     try {
       // Send a POST request to the server to register the user
       const response = await api.post(
@@ -94,6 +96,8 @@ function Signup(props) {
         error.response?.data?.errors?.[0]?.msg ||
         "Registration failed. Please try again.";
       props.handleAlert(errorMessage, "danger");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -137,13 +141,13 @@ function Signup(props) {
             onChange={handleChange}
             iconRight={
               showPassword ? (
-                <EyeOff
+                <Eye
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-gray-500"
                   size={20}
                   onClick={() => setShowPassword(!showPassword)}
                 />
               ) : (
-                <Eye
+                <EyeOff
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-gray-500"
                   size={20}
                   onClick={() => setShowPassword(!showPassword)}
@@ -164,13 +168,13 @@ function Signup(props) {
             onChange={handleChange}
             iconRight={
               showConfirmPassword ? (
-                <EyeOff
+                <Eye
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-gray-500"
                   size={20}
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 />
               ) : (
-                <Eye
+                <EyeOff
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-gray-500"
                   size={20}
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -181,10 +185,11 @@ function Signup(props) {
         </div>
 
         <Button
-          text={"Create account"}
+          text={loading ? "Creating account..." : "Create account"}
+          disabled={loading}
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              handleSubmit();
+            if (e.key === "Enter" && !loading) {
+              handleSubmit(e);
             }
           }}
         />
