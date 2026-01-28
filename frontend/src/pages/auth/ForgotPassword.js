@@ -70,7 +70,7 @@ function ForgotPassword(props) {
 
         <Button text={loading ? "Sending..." : "Send Verification Code"} disabled={loading} />
 
-        <div className="text-center text-sm">
+        <div className="text-center text-sm" disabled={loading}>
           <Link
             to="/login"
             className="inline-flex items-center text-indigo-600 hover:text-indigo-500"

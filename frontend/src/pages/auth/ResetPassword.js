@@ -90,13 +90,13 @@ function ResetPassword(props) {
               onChange={(e) => setPassword(e.target.value)}
               iconRight={
                 showPassword ? (
-                  <EyeOff
+                  <Eye
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-gray-500"
                     size={20}
                     onClick={() => setShowPassword(!showPassword)}
                   />
                 ) : (
-                  <Eye
+                  <EyeOff
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-gray-500"
                     size={20}
                     onClick={() => setShowPassword(!showPassword)}
@@ -119,13 +119,13 @@ function ResetPassword(props) {
               onChange={(e) => setConfirmPassword(e.target.value)}
               iconRight={
                 showConfirmPassword ? (
-                  <EyeOff
+                  <Eye
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-gray-500"
                     size={20}
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   />
                 ) : (
-                  <Eye
+                  <EyeOff
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-gray-500"
                     size={20}
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
