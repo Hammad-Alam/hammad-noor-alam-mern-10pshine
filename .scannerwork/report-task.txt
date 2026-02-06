@@ -1,0 +1,6 @@
+projectKey=Luminote
+serverUrl=http://localhost:9000
+serverVersion=26.1.0.118079
+dashboardUrl=http://localhost:9000/dashboard?id=Luminote
+ceTaskId=b70bf685-3b68-4e13-a5f5-8b66d2768db3
+ceTaskUrl=http://localhost:9000/api/ce/task?id=b70bf685-3b68-4e13-a5f5-8b66d2768db3
